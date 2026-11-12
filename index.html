@@ -68,6 +68,13 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
 #plist .del{flex:0 0 auto;height:40px;min-width:44px;border-radius:10px;border:1.5px solid #f1b8b3;background:#fff;color:#b42318;font-size:18px;font-weight:600;cursor:pointer;padding:0 10px}
 #plist .del.arm{background:#b42318;color:#fff;border-color:#b42318;font-size:14px}
 #plist .empty{color:var(--mute);font-size:14px;justify-content:center}
+#plist .ed{flex:0 0 auto;height:40px;min-width:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--navy);font-size:17px;cursor:pointer;padding:0 10px}
+#plist li.editing{flex-wrap:wrap;gap:6px;background:#f7f9fc;margin:0 -12px;padding:10px 12px}
+#plist li.editing input{min-width:0}
+#plist li.editing .e-id{flex:0 0 76px}#plist li.editing .e-name{flex:1 1 120px}#plist li.editing .e-title{flex:1 1 100%}
+#plist li.editing button{flex:1;height:44px;border-radius:10px;font-size:15px;font-weight:650;cursor:pointer}
+#plist .e-save{background:var(--navy);color:#fff;border:0}
+#plist .e-cancel{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
 .add{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 .add input{min-width:0}
 .add #addId{flex:0 0 76px}.add #addName{flex:1 1 120px}.add #addTitle{flex:1 1 100%}
@@ -203,18 +210,47 @@ function nextId(){
   const last=POSTERS[POSTERS.length-1],m=last&&/^(\D*)(\d+)$/.exec(last.id);
   return m?m[1]+(+m[2]+1):"";
 }
+let editing=-1;   // index of the poster being edited, or -1
 function renderList(){
-  $("plist").innerHTML=POSTERS.length?POSTERS.map((p,i)=>`<li>
+  $("plist").innerHTML=POSTERS.length?POSTERS.map((p,i)=>i===editing?`<li class="editing">
+    <input type="text" class="e-id" value="${esc(p.id)}" aria-label="Poster number" autocapitalize="characters">
+    <input type="text" class="e-name" value="${esc(p.name)}" aria-label="Author" placeholder="Author surname">
+    <input type="text" class="e-title" value="${esc(p.title||"")}" aria-label="Title" placeholder="Title (optional)">
+    <button class="e-save" data-save="${i}">Save</button><button class="e-cancel" data-cancel>Cancel</button></li>`
+   :`<li>
     <div class="board">${esc(p.id)}</div>
     <div class="pt">${esc(p.name)}${p.title?`<small>${esc(p.title)}</small>`:""}</div>
+    <button class="ed" data-edit="${i}" aria-label="Edit ${esc(p.id)}">✎</button>
     <button class="del" data-del="${i}" aria-label="Delete ${esc(p.id)}">✕</button></li>`).join("")
     :`<li class="empty">No posters yet. Add one below.</li>`;
   $("addId").value=nextId();
 }
 function postersChanged(){POSTERS=CFG.posters;saveCfg();save();build();render();renderList()}
 
-// Delete: first tap arms the button, second tap within 3s deletes
+function saveEdit(i){
+  const li=document.querySelector("#plist li.editing");
+  const id=li.querySelector(".e-id").value.trim(),name=li.querySelector(".e-name").value.trim(),title=li.querySelector(".e-title").value.trim();
+  if(!id||!name){setupMsg("A poster needs a number and author.",true);return}
+  const old=POSTERS[i];
+  if(POSTERS.some((p,j)=>j!==i&&p.id.toLowerCase()===id.toLowerCase())){setupMsg(`${id} is already in the list.`,true);return}
+  if(id!==old.id){if(S[old.id])S[id]=S[old.id];delete S[old.id]}   // scores follow the poster
+  editing=-1;
+  CFG.posters=POSTERS.map((p,j)=>j===i?{id,name,title}:p);postersChanged();
+  setupMsg(`Updated ${id} ${name}.`);
+}
+$("plist").addEventListener("keydown",e=>{
+  if(!e.target.closest("li.editing"))return;
+  if(e.key==="Enter"){e.preventDefault();saveEdit(editing)}
+  else if(e.key==="Escape"){editing=-1;renderList()}
+});
+
 $("plist").addEventListener("click",e=>{
+  const ed=e.target.closest("button[data-edit]");
+  if(ed){editing=+ed.dataset.edit;renderList();document.querySelector("#plist li.editing .e-name").focus();return}
+  const sv=e.target.closest("button[data-save]");
+  if(sv){saveEdit(+sv.dataset.save);return}
+  if(e.target.closest("button[data-cancel]")){editing=-1;renderList();return}
+  // Delete: first tap arms the button, second tap within 3s deletes
   const b=e.target.closest("button[data-del]");if(!b)return;
   if(!b.classList.contains("arm")){
     document.querySelectorAll("#plist .del.arm").forEach(x=>{x.classList.remove("arm");x.textContent="✕"});
@@ -223,7 +259,7 @@ $("plist").addEventListener("click",e=>{
     return;
   }
   const p=POSTERS[+b.dataset.del];
-  delete S[p.id];
+  delete S[p.id];editing=-1;
   CFG.posters=POSTERS.filter(x=>x!==p);postersChanged();
   setupMsg(`Deleted ${p.id} ${p.name}.`);
 });
