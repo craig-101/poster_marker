@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAS 2026 Poster Scorer</title>
+<style>
+:root{--navy:#1f3a5f;--bg:#f3f5f9;--card:#fff;--line:#d9dee8;--ink:#17202e;--mute:#667085;--accent:#0b7a5a;--warn:#b54708}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:40px}
+header{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+header h1{margin:0;font-size:17px;font-weight:650}
+header .sub{font-size:12px;opacity:.8;margin-top:2px}
+#top2{margin-top:8px;display:flex;gap:8px}
+.pill{flex:1;background:rgba(255,255,255,.14);border-radius:10px;padding:6px 10px;font-size:13px;min-height:44px}
+.pill b{display:block;font-size:11px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:.04em}
+main{max-width:640px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.card.done{border-color:var(--accent)}
+.head{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.board{background:var(--navy);color:#fff;border-radius:8px;padding:4px 9px;font-weight:700;font-size:15px}
+.title{flex:1;font-size:14px;line-height:1.3}
+.title small{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.total{min-width:58px;text-align:center;border-radius:10px;background:var(--bg);padding:4px 6px}
+.total b{display:block;font-size:20px;line-height:1.1}
+.total span{font-size:11px;color:var(--mute)}
+.card.done .total{background:#e3f4ed}
+.card.done .total b{color:var(--accent)}
+.row{margin-top:8px}
+.row label{display:block;font-size:12.5px;font-weight:600;color:var(--mute);margin-bottom:4px}
+.btns{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.btns button{height:46px;border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:18px;font-weight:600;color:var(--ink);cursor:pointer;touch-action:manipulation}
+.btns button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+h2{font-size:15px;margin:18px 4px 8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 4px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;color:var(--mute);letter-spacing:.04em}
+td.n,th.n{text-align:center}
+tr.top td{font-weight:650;background:#eef8f3}
+.note{font-size:13px;color:var(--warn);margin:8px 2px}
+.field{display:block;margin:8px 0}
+.field span{font-size:12px;color:var(--mute);font-weight:600}
+input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:16px;background:#fff}
+textarea{width:100%;min-height:260px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;background:#fff}
+.actions{display:flex;gap:8px;margin-top:8px}
+.actions button{flex:1;height:50px;border-radius:12px;border:0;font-size:16px;font-weight:650;cursor:pointer}
+#copy{background:#25a35a;color:#fff}
+#reset{background:#fff;color:#b42318;border:1.5px solid #f1b8b3;flex:0 0 auto;padding:0 16px}
+#msg{font-size:13px;color:var(--accent);min-height:20px;margin-top:6px}
+#confirm{display:none;background:#fff3f2;border:1px solid #f1b8b3;border-radius:12px;padding:12px;margin-top:8px;font-size:14px}
+#confirm button{margin:8px 8px 0 0;height:42px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:15px;padding:0 16px}
+#confirm button.d{background:#b42318;color:#fff;border-color:#b42318}
+details#setup{padding:0}
+details#setup summary{padding:12px;font-weight:650;font-size:15px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details#setup summary::-webkit-details-marker{display:none}
+details#setup summary::after{content:"Edit ▾";font-size:13px;font-weight:600;color:var(--navy)}
+details#setup[open] summary::after{content:"Close ▴"}
+details#setup .body{padding:0 12px 12px}
+input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:16px;background:#fff;color:var(--ink);min-height:46px}
+.two{display:flex;gap:8px}.two>*{flex:1}
+.hint{font-size:12px;color:var(--mute);margin:2px 0 6px}
+.lbl{font-size:12px;color:var(--mute);font-weight:600;margin-top:10px}
+#plist{margin:4px 0 0;padding:0;list-style:none}
+#plist li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+#plist .board{font-size:13px;flex:0 0 auto}
+#plist .pt{flex:1;min-width:0;font-size:14px}
+#plist .pt small{display:block;color:var(--mute);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#plist .del{flex:0 0 auto;height:40px;min-width:44px;border-radius:10px;border:1.5px solid #f1b8b3;background:#fff;color:#b42318;font-size:18px;font-weight:600;cursor:pointer;padding:0 10px}
+#plist .del.arm{background:#b42318;color:#fff;border-color:#b42318;font-size:14px}
+#plist .empty{color:var(--mute);font-size:14px;justify-content:center}
+.add{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.add input{min-width:0}
+.add #addId{flex:0 0 76px}.add #addName{flex:1 1 120px}.add #addTitle{flex:1 1 100%}
+.add button{flex:1 1 100%;height:46px;border-radius:12px;border:0;background:var(--navy);color:#fff;font-size:16px;font-weight:650;cursor:pointer}
+#setupMsg{font-size:13px;min-height:18px;margin-top:6px;color:var(--accent)}
+#setupMsg.err{color:#b42318}
+</style>
+</head>
+<body>
+<header>
+  <h1>DAS 2026 Poster Scorer</h1>
+  <div class="sub" id="sub"></div>
+  <div id="top2"></div>
+</header>
+<main>
+  <details class="card" id="setup">
+    <summary>Session setup</summary>
+    <div class="body">
+      <label class="field"><span>Session</span><input type="text" id="session"></label>
+      <div class="two">
+        <label class="field"><span>Date</span><input type="date" id="date"></label>
+        <label class="field"><span>Group</span><input type="text" id="group"></label>
+      </div>
+      <label class="field"><span>Judge name</span><input type="text" id="judge"></label>
+      <div class="lbl">Posters</div>
+      <ul id="plist"></ul>
+      <div class="lbl">Quick add</div>
+      <div class="add">
+        <input type="text" id="addId" placeholder="P23" autocapitalize="characters">
+        <input type="text" id="addName" placeholder="Author surname">
+        <input type="text" id="addTitle" placeholder="Title (optional)">
+        <button id="addBtn">Add poster</button>
+      </div>
+      <div id="setupMsg"></div>
+      <div class="hint">Changes save automatically.</div>
+    </div>
+  </details>
+
+  <div id="cards"></div>
+
+  <h2>Leaderboard</h2>
+  <div class="card">
+    <table id="board"></table>
+    <div id="tie" class="note" style="display:none"></div>
+  </div>
+
+  <h2>WhatsApp message</h2>
+  <div class="card">
+    <label class="field"><span>Include full score breakdown</span>
+      <select id="full" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #d9dee8;font-size:16px;background:#fff">
+        <option value="1">Top two + all scores</option>
+        <option value="0">Top two only</option>
+      </select></label>
+    <textarea id="out" spellcheck="false"></textarea>
+    <div class="actions">
+      <button id="copy">Copy for WhatsApp</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div id="msg"></div>
+    <div id="confirm">Clear all scores? This cannot be undone.<br>
+      <button class="d" id="yes">Clear all</button><button id="no">Cancel</button></div>
+  </div>
+</main>
+
+<script>
+const DEFAULT_CFG={
+ session:"Poster Session 1 (Thursday Lunchtime 1)",
+ date:"2026-11-12",
+ group:"1.4",
+ judge:"Kariem El-Boghdadly",
+ posters:[
+  {id:"P17",name:"Pallot",title:"A case of steak well done. THRIVE assisted bronchoscopy for foreign body retrieval in a rural DGH"},
+  {id:"P18",name:"Patel",title:"TREAT_EM FEARLESS FONA: Chefs Kiss. An intuitive in situ SIM approach"},
+  {id:"P19",name:"Sathe",title:"Cloud-based immersive learning environment for Difficult Airway Society guidelines"},
+  {id:"P20",name:"Timpani",title:"Emergency front of neck access kits for paediatric CICO scenarios in a London tertiary paediatric centre"},
+  {id:"P21",name:"Arumadi",title:"Delayed catastrophic haemorrhage following tracheostomy: an airway emergency"},
+  {id:"P22",name:"Barrow",title:"Difficult tracheal intubation in paediatric critical care: results from PANDA-PIC"}
+ ]
+};
+const CFG_KEY="das2026-config-v1";
+let CFG;
+try{CFG=Object.assign({},DEFAULT_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||"{}"))}catch(e){CFG={...DEFAULT_CFG}}
+if(!Array.isArray(CFG.posters))CFG.posters=DEFAULT_CFG.posters;
+const saveCfg=()=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG))}catch(e){}};
+let POSTERS=CFG.posters;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||"");return m?`${m[3]}/${m[2]}/${m[1]}`:""};
+const CRIT=[
+ {k:"sci",label:"Scientific quality / originality",short:"Sci"},
+ {k:"clar",label:"Clarity & organisation of poster",short:"Clarity"},
+ {k:"data",label:"Strength of data / conclusions",short:"Data"},
+ {k:"pres",label:"Presentation of work (explaining & discussing)",short:"Pres"}
+];
+const KEY="das2026-scores-v1";
+let S={};
+try{S=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){S={}}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const sc=(id,k)=>(S[id]||{})[k]||0;
+const complete=id=>CRIT.every(c=>sc(id,c.k)>0);
+const total=id=>CRIT.reduce((a,c)=>a+sc(id,c.k),0);
+const count=id=>CRIT.filter(c=>sc(id,c.k)>0).length;
+
+function build(){
+  document.getElementById("cards").innerHTML=POSTERS.map((p,i)=>`
+  <div class="card" id="c-${i}">
+    <div class="head">
+      <div class="board">${esc(p.id)}</div>
+      <div class="title">${esc(p.title)}<small>${esc(p.name)}</small></div>
+      <div class="total"><b id="t-${i}">–</b><span>/ 20</span></div>
+    </div>
+    ${CRIT.map(c=>`<div class="row"><label>${c.label}</label><div class="btns">
+      ${[1,2,3,4,5].map(n=>`<button data-i="${i}" data-k="${c.k}" data-n="${n}">${n}</button>`).join("")}
+    </div></div>`).join("")}
+  </div>`).join("");
+  document.getElementById("sub").textContent=[CFG.session,fmtDate(CFG.date),CFG.group&&"Group "+CFG.group].filter(Boolean).join(" · ");
+}
+document.getElementById("cards").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-n]"); if(!b)return;
+  const p=POSTERS[+b.dataset.i].id,{k,n}=b.dataset; S[p]=S[p]||{};
+  S[p][k]=(S[p][k]==+n)?0:+n;   // tap again to clear
+  save(); render();
+});
+
+// ---- Session setup ----
+const $=id=>document.getElementById(id);
+let msgTimer;
+const setupMsg=(t,err)=>{const m=$("setupMsg");m.textContent=t;m.className=err?"err":"";clearTimeout(msgTimer);msgTimer=setTimeout(()=>m.textContent="",4000)};
+function fillSetup(){
+  $("session").value=CFG.session;$("date").value=CFG.date;$("group").value=CFG.group;$("judge").value=CFG.judge;
+  renderList();
+}
+function nextId(){
+  const last=POSTERS[POSTERS.length-1],m=last&&/^(\D*)(\d+)$/.exec(last.id);
+  return m?m[1]+(+m[2]+1):"";
+}
+function renderList(){
+  $("plist").innerHTML=POSTERS.length?POSTERS.map((p,i)=>`<li>
+    <div class="board">${esc(p.id)}</div>
+    <div class="pt">${esc(p.name)}${p.title?`<small>${esc(p.title)}</small>`:""}</div>
+    <button class="del" data-del="${i}" aria-label="Delete ${esc(p.id)}">✕</button></li>`).join("")
+    :`<li class="empty">No posters yet. Add one below.</li>`;
+  $("addId").value=nextId();
+}
+function postersChanged(){POSTERS=CFG.posters;saveCfg();save();build();render();renderList()}
+
+// Delete: first tap arms the button, second tap within 3s deletes
+$("plist").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-del]");if(!b)return;
+  if(!b.classList.contains("arm")){
+    document.querySelectorAll("#plist .del.arm").forEach(x=>{x.classList.remove("arm");x.textContent="✕"});
+    b.classList.add("arm");b.textContent="Delete?";
+    setTimeout(()=>{if(b.isConnected){b.classList.remove("arm");b.textContent="✕"}},3000);
+    return;
+  }
+  const p=POSTERS[+b.dataset.del];
+  delete S[p.id];
+  CFG.posters=POSTERS.filter(x=>x!==p);postersChanged();
+  setupMsg(`Deleted ${p.id} ${p.name}.`);
+});
+
+function addPoster(){
+  const id=$("addId").value.trim(),name=$("addName").value.trim(),title=$("addTitle").value.trim();
+  if(!id||!name){setupMsg("Enter a poster number and author.",true);(id?$("addName"):$("addId")).focus();return}
+  if(POSTERS.some(p=>p.id.toLowerCase()===id.toLowerCase())){setupMsg(`${id} is already in the list.`,true);$("addId").focus();return}
+  delete S[id];   // start fresh
+  CFG.posters=[...POSTERS,{id,name,title}];postersChanged();
+  $("addName").value="";$("addTitle").value="";$("addName").focus();
+  setupMsg(`Added ${id} ${name}.`);
+}
+$("addBtn").onclick=addPoster;
+["addId","addName","addTitle"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addPoster()}}));
+
+// Session details save as you type
+["session","date","group","judge"].forEach(k=>$(k).addEventListener("input",()=>{
+  CFG[k]=$(k).value.trim();saveCfg();build();render();
+}));
+
+function ranked(){
+  return POSTERS.filter(p=>complete(p.id))
+    .sort((a,b)=>total(b.id)-total(a.id)||a.id.localeCompare(b.id));
+}
+
+function render(){
+  POSTERS.forEach((p,i)=>{
+    document.querySelectorAll(`#c-${i} button`).forEach(b=>b.classList.toggle("on",sc(p.id,b.dataset.k)==+b.dataset.n));
+    const t=document.getElementById("t-"+i);
+    t.textContent=count(p.id)===0?"–":(complete(p.id)?total(p.id):count(p.id)+"/4");
+    document.getElementById("c-"+i).classList.toggle("done",complete(p.id));
+  });
+  const r=ranked();
+  document.getElementById("top2").innerHTML=[0,1].map(i=>`<div class="pill"><b>#${i+1}</b>${r[i]?`${esc(r[i].id)} · ${esc(r[i].name)} · ${total(r[i].id)}/20`:"—"}</div>`).join("");
+  document.getElementById("board").innerHTML=
+   `<tr><th>Poster</th>${CRIT.map(c=>`<th class="n">${c.short}</th>`).join("")}<th class="n">Total</th></tr>`+
+   POSTERS.map(p=>`<tr class="${r.slice(0,2).includes(p)?"top":""}"><td>${esc(p.id)} ${esc(p.name)}</td>${CRIT.map(c=>`<td class="n">${sc(p.id,c.k)||"–"}</td>`).join("")}<td class="n">${complete(p.id)?total(p.id):"–"}</td></tr>`).join("");
+  const tie=document.getElementById("tie");
+  if(r.length>2&&total(r[1].id)===total(r[2].id)){
+    const t=total(r[1].id),tied=r.filter(x=>total(x.id)===t).map(x=>x.id).join(", ");
+    tie.style.display="block";tie.textContent=`Tie on ${t}/20 for the final top-two place (${tied}). Break it before sending.`;
+  }else tie.style.display="none";
+  document.getElementById("out").value=message(r);
+}
+
+function message(r){
+  const full=document.getElementById("full").value==="1";
+  let m=`*DAS 2026 Poster Judging*\nJudge: ${CFG.judge}\nSession: ${CFG.session}\n`;
+  if(CFG.date)m+=`Date: ${fmtDate(CFG.date)}\n`;
+  if(CFG.group)m+=`Group: ${CFG.group}\n`;
+  m+=`\n*Top two choices*\n`;
+  m+=[0,1].map(i=>r[i]?`${i+1}. ${r[i].id} – ${r[i].name} (${total(r[i].id)}/20)`:`${i+1}. (not yet scored)`).join("\n");
+  if(full){
+    m+=`\n\n*All scores* (${CRIT.map(c=>c.short).join(" / ")})\n`;
+    m+=POSTERS.map(p=>`${p.id} ${p.name}: ${CRIT.map(c=>sc(p.id,c.k)||"-").join("/")} = ${complete(p.id)?total(p.id)+"/20":"incomplete"}`).join("\n");
+  }
+  return m;
+}
+
+const msg=t=>{const m=document.getElementById("msg");m.textContent=t;setTimeout(()=>m.textContent="",4000)};
+document.getElementById("copy").onclick=async()=>{
+  const ta=document.getElementById("out");
+  try{await navigator.clipboard.writeText(ta.value);msg("Copied. Paste into WhatsApp.");return}catch(e){}
+  try{ta.focus();ta.select();ta.setSelectionRange(0,99999);
+    if(document.execCommand("copy")){msg("Copied. Paste into WhatsApp.");return}}catch(e){}
+  ta.focus();ta.select();msg("Text selected. Press and hold, then tap Copy.");
+};
+document.getElementById("full").addEventListener("input",render);
+document.getElementById("reset").onclick=()=>document.getElementById("confirm").style.display="block";
+document.getElementById("no").onclick=()=>document.getElementById("confirm").style.display="none";
+document.getElementById("yes").onclick=()=>{S={};save();document.getElementById("confirm").style.display="none";render();window.scrollTo(0,0)};
+
+build();render();fillSetup();
+</script>
+</body>
+</html>
