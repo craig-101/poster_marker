@@ -183,7 +183,7 @@ function build(){
     <div class="head">
       <div class="board">${esc(p.id)}</div>
       <div class="title">${esc(p.title)}<small>${esc(p.name)}</small></div>
-      <div class="total"><b id="t-${i}">–</b><span>/ 20</span></div>
+      <div class="total"><b id="t-${i}">–</b><span id="ts-${i}">/ 20</span></div>
     </div>
     ${CRIT.map(c=>`<div class="row"><label>${c.label}</label><div class="btns">
       ${[1,2,3,4,5].map(n=>`<button data-i="${i}" data-k="${c.k}" data-n="${n}">${n}</button>`).join("")}
@@ -290,14 +290,16 @@ function render(){
   POSTERS.forEach((p,i)=>{
     document.querySelectorAll(`#c-${i} button`).forEach(b=>b.classList.toggle("on",sc(p.id,b.dataset.k)==+b.dataset.n));
     const t=document.getElementById("t-"+i);
-    t.textContent=count(p.id)===0?"–":(complete(p.id)?total(p.id):count(p.id)+"/4");
+    t.textContent=count(p.id)===0?"–":total(p.id);
+    document.getElementById("ts-"+i).textContent=count(p.id)===0||complete(p.id)?"/ 20":`/ 20 · ${count(p.id)} of 4`;
     document.getElementById("c-"+i).classList.toggle("done",complete(p.id));
   });
   const r=ranked();
   document.getElementById("top2").innerHTML=[0,1].map(i=>`<div class="pill"><b>#${i+1}</b>${r[i]?`${esc(r[i].id)} · ${esc(r[i].name)} · ${total(r[i].id)}/20`:"—"}</div>`).join("");
   document.getElementById("board").innerHTML=
    `<tr><th>Poster</th>${CRIT.map(c=>`<th class="n">${c.short}</th>`).join("")}<th class="n">Total</th></tr>`+
-   POSTERS.map(p=>`<tr class="${r.slice(0,2).includes(p)?"top":""}"><td>${esc(p.id)} ${esc(p.name)}</td>${CRIT.map(c=>`<td class="n">${sc(p.id,c.k)||"–"}</td>`).join("")}<td class="n">${complete(p.id)?total(p.id):"–"}</td></tr>`).join("");
+   POSTERS.map(p=>`<tr class="${r.slice(0,2).includes(p)?"top":""}"><td>${esc(p.id)} ${esc(p.name)}</td>${CRIT.map(c=>`<td class="n">${sc(p.id,c.k)||"–"}</td>`).join("")}<td class="n">${complete(p.id)?total(p.id):count(p.id)?`<span style="color:var(--mute)">${total(p.id)}*</span>`:"–"}</td></tr>`).join("")+
+   (POSTERS.some(p=>count(p.id)&&!complete(p.id))?`<tr><td colspan="${CRIT.length+2}" style="font-size:12px;color:var(--mute);border:0">* partly scored, not ranked yet</td></tr>`:"");
   const tie=document.getElementById("tie");
   if(r.length>2&&total(r[1].id)===total(r[2].id)){
     const t=total(r[1].id),tied=r.filter(x=>total(x.id)===t).map(x=>x.id).join(", ");
