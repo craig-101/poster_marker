@@ -4,20 +4,17 @@
 //   GET  /api/state  → { version, cfg, scores, updatedAt }  (version 0 = empty)
 //   PUT  /api/state  ← { cfg, scores }  → { version }        (last write wins)
 //
-// Env: PORT (Render sets it), DATA_DIR (default ./data; on Render a disk such as
-// /var/data), SCORER_KEY (optional: when set, the API needs it, and the page
-// picks it up from a ?key= link).
+// Env (all optional): PORT (Render sets it), DATA_DIR (default ./data; on Render
+// a disk such as /var/data).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
-const KEY = process.env.SCORER_KEY || '';
 const MAX_BODY = 256 * 1024;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -43,13 +40,6 @@ function validate(body) {
   return null;
 }
 
-function keyOk(req) {
-  if (!KEY) return true;
-  const got = Buffer.from(String(req.headers['x-scorer-key'] || ''));
-  const want = Buffer.from(KEY);
-  return got.length === want.length && crypto.timingSafeEqual(got, want);
-}
-
 function send(res, status, body, type = 'application/json; charset=utf-8') {
   res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(type.startsWith('application/json') ? JSON.stringify(body) : body);
@@ -66,7 +56,6 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && pathname === '/healthz') return send(res, 200, { ok: true });
 
   if (pathname === '/api/state') {
-    if (!keyOk(req)) return send(res, 401, { error: 'Missing or wrong scorer key.' });
     if (req.method === 'GET') return send(res, 200, state);
     if (req.method === 'PUT') {
       let size = 0;
@@ -98,4 +87,4 @@ const server = http.createServer((req, res) => {
   send(res, 404, 'Not found', 'text/plain; charset=utf-8');
 });
 
-server.listen(PORT, () => console.log(`Poster scorer on http://localhost:${PORT}${KEY ? ' (key required)' : ''}`));
+server.listen(PORT, () => console.log(`Poster scorer on http://localhost:${PORT}`));

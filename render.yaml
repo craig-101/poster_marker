@@ -12,8 +12,6 @@ services:
     envVars:
       - key: DATA_DIR
         value: /var/data
-      - key: SCORER_KEY
-        generateValue: true
     disk:
       name: scorer-data
       mountPath: /var/data

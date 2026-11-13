@@ -1,5 +1,5 @@
 # DAS 2026 Poster Scorer. No npm dependencies, so no install step.
-# Render: add a Disk mounted at /var/data, and set SCORER_KEY in Environment.
+# Render: add a Disk mounted at /var/data so scores survive restarts.
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production \
