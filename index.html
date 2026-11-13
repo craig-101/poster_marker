@@ -161,6 +161,10 @@ const CFG_KEY="das2026-config-v1";
 let CFG;
 try{CFG=Object.assign({},DEFAULT_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||"{}"))}catch(e){CFG={...DEFAULT_CFG}}
 if(!Array.isArray(CFG.posters))CFG.posters=DEFAULT_CFG.posters;
+// Posters always show in number order; numeric so P9 comes before P10.
+const byNum=(a,b)=>String(a.id).localeCompare(String(b.id),undefined,{numeric:true,sensitivity:"base"});
+const sortPosters=l=>[...l].sort(byNum);
+CFG.posters=sortPosters(CFG.posters);
 const saveCfg=()=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG))}catch(e){};markDirty()};
 let POSTERS=CFG.posters;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -228,7 +232,7 @@ function renderList(){
     :`<li class="empty">No posters yet. Add one below.</li>`;
   $("addId").value=nextId();
 }
-function postersChanged(){POSTERS=CFG.posters;saveCfg();save();build();render();renderList()}
+function postersChanged(){CFG.posters=sortPosters(CFG.posters);POSTERS=CFG.posters;saveCfg();save();build();render();renderList()}
 
 function saveEdit(i){
   const li=document.querySelector("#plist li.editing");
@@ -355,7 +359,7 @@ function loadSharedSetup(){
   ["session","date","group"].forEach(k=>{if(typeof inc[k]==="string")CFG[k]=inc[k]});
   // Keep this phone's judge name if it has been set; it's per judge.
   if(inc.judge&&(!CFG.judge||CFG.judge===DEFAULT_CFG.judge))CFG.judge=inc.judge;
-  CFG.posters=posters;POSTERS=posters;saveCfg();
+  CFG.posters=sortPosters(posters);POSTERS=CFG.posters;saveCfg();
   setTimeout(()=>{$("setup").open=true;setupMsg(`Loaded ${posters.length} posters.`)},0);
 }
 // ---- Shared sheet ----
@@ -400,7 +404,7 @@ async function push(){
   finally{pushing=false}
 }
 function adopt(st){
-  CFG=Object.assign({},DEFAULT_CFG,st.cfg);if(!Array.isArray(CFG.posters))CFG.posters=[];
+  CFG=Object.assign({},DEFAULT_CFG,st.cfg);CFG.posters=sortPosters(Array.isArray(CFG.posters)?CFG.posters:[]);
   S=st.scores||{};POSTERS=CFG.posters;VER=st.version;
   try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG));localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   setLS(VER_KEY,String(VER));
