@@ -1,0 +1,20 @@
+# Render blueprint: one web service with a disk for the shared sheet.
+# A disk needs a paid instance (Starter); on the free plan the data is lost on
+# every restart or deploy.
+services:
+  - type: web
+    name: poster-marker
+    runtime: node
+    plan: starter
+    buildCommand: "true"
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: SCORER_KEY
+        generateValue: true
+    disk:
+      name: scorer-data
+      mountPath: /var/data
+      sizeGB: 1

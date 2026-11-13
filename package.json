@@ -1,0 +1,13 @@
+{
+  "name": "poster-marker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DAS 2026 poster scorer with one shared sheet across devices",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

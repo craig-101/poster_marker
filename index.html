@@ -8,6 +8,8 @@
 :root{--navy:#1f3a5f;--bg:#f3f5f9;--card:#fff;--line:#d9dee8;--ink:#17202e;--mute:#667085;--accent:#0b7a5a;--warn:#b54708}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:40px}
+#sync{position:absolute;top:15px;right:16px;font-size:11px;font-weight:600;opacity:.85}
+#sync.off{color:#fecdca;opacity:1}
 header{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 header h1{margin:0;font-size:17px;font-weight:650}
 header .sub{font-size:12px;opacity:.8;margin-top:2px}
@@ -79,7 +81,6 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
 .add input{min-width:0}
 .add #addId{flex:0 0 76px}.add #addName{flex:1 1 120px}.add #addTitle{flex:1 1 100%}
 .add button{flex:1 1 100%;height:46px;border-radius:12px;border:0;background:var(--navy);color:#fff;font-size:16px;font-weight:650;cursor:pointer}
-#shareBtn{width:100%;height:46px;margin-top:12px;border-radius:12px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font-size:16px;font-weight:650;cursor:pointer}
 #setupMsg{font-size:13px;min-height:18px;margin-top:6px;color:var(--accent)}
 #setupMsg.err{color:#b42318}
 </style>
@@ -87,6 +88,7 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
 <body>
 <header>
   <h1>DAS 2026 Poster Scorer</h1>
+  <div id="sync"></div>
   <div class="sub" id="sub"></div>
   <div id="top2"></div>
 </header>
@@ -109,9 +111,8 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
         <input type="text" id="addTitle" placeholder="Title (optional)">
         <button id="addBtn">Add poster</button>
       </div>
-      <button id="shareBtn">Send setup to another phone</button>
       <div id="setupMsg"></div>
-      <div class="hint">Changes save on this device only. To use them on another phone, send the setup and open the link there.</div>
+      <div class="hint">Changes save to every device using this scorer.</div>
     </div>
   </details>
 
@@ -160,7 +161,7 @@ const CFG_KEY="das2026-config-v1";
 let CFG;
 try{CFG=Object.assign({},DEFAULT_CFG,JSON.parse(localStorage.getItem(CFG_KEY)||"{}"))}catch(e){CFG={...DEFAULT_CFG}}
 if(!Array.isArray(CFG.posters))CFG.posters=DEFAULT_CFG.posters;
-const saveCfg=()=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG))}catch(e){}};
+const saveCfg=()=>{try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG))}catch(e){};markDirty()};
 let POSTERS=CFG.posters;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d||"");return m?`${m[3]}/${m[2]}/${m[1]}`:""};
@@ -173,7 +174,7 @@ const CRIT=[
 const KEY="das2026-scores-v1";
 let S={};
 try{S=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){S={}}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){};markDirty()};
 const sc=(id,k)=>(S[id]||{})[k]||0;
 const complete=id=>CRIT.every(c=>sc(id,c.k)>0);
 const total=id=>CRIT.reduce((a,c)=>a+sc(id,c.k),0);
@@ -344,14 +345,6 @@ document.getElementById("yes").onclick=()=>{S={};save();document.getElementById(
 // link loads them here. Scores are keyed by poster number, so they're kept.
 const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,"+").replace(/_/g,"/"))));
-$("shareBtn").onclick=async()=>{
-  const {session,date,group,judge,posters}=CFG;
-  const url=location.origin+location.pathname+"#setup="+b64e(JSON.stringify({session,date,group,judge,posters}));
-  const n=posters.length,text=`DAS 2026 poster scorer: ${n} poster${n===1?"":"s"} for ${session}`;
-  try{if(navigator.share){await navigator.share({title:"Poster scorer setup",text,url});return}}catch(e){if(e.name==="AbortError")return}
-  try{await navigator.clipboard.writeText(url);setupMsg("Link copied. Open it on the other phone.");return}catch(e){}
-  prompt("Copy this link and open it on the other phone:",url);
-};
 function loadSharedSetup(){
   const m=/^#setup=([\w-]+)$/.exec(location.hash);if(!m)return;
   history.replaceState(null,"",location.pathname+location.search);
@@ -365,7 +358,75 @@ function loadSharedSetup(){
   CFG.posters=posters;POSTERS=posters;saveCfg();
   setTimeout(()=>{$("setup").open=true;setupMsg(`Loaded ${posters.length} posters.`)},0);
 }
-loadSharedSetup();
+// ---- Shared sheet ----
+// The server keeps one copy of the setup and scores. This device keeps a local
+// copy too, so scoring carries on with no signal and syncs when it's back.
+// A local change is pushed (last write wins); otherwise the page polls and
+// adopts newer versions saved from other devices.
+const VER_KEY="das2026-sync-version",DIRTY_KEY="das2026-sync-dirty",API_KEY_KEY="das2026-scorer-key";
+const getLS=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const setLS=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+(function takeKeyFromLink(){
+  const u=new URL(location.href),k=u.searchParams.get("key");
+  if(k){setLS(API_KEY_KEY,k);u.searchParams.delete("key");history.replaceState(null,"",u.pathname+u.search+u.hash)}
+})();
+let VER=+getLS(VER_KEY)||0,dirty=getLS(DIRTY_KEY)==="1",pushing=false,pushTimer=null,changeSeq=0,online=location.protocol!=="file:";
+function syncStatus(t,bad){const el=$("sync");if(el){el.textContent=t;el.className=bad?"off":""}}
+function markDirty(){
+  if(!online)return;
+  changeSeq++;dirty=true;setLS(DIRTY_KEY,"1");syncStatus("Saving…");
+  clearTimeout(pushTimer);pushTimer=setTimeout(push,400);
+}
+const api=(method,body)=>fetch("/api/state",{method,cache:"no-store",
+  headers:{"Content-Type":"application/json","X-Scorer-Key":getLS(API_KEY_KEY)||""},
+  body:body&&JSON.stringify(body)}).then(async r=>{
+    if(r.status===401)throw Object.assign(new Error("key"),{key:true});
+    if(r.status===404||r.status===405)throw Object.assign(new Error("static"),{noServer:true});
+    if(!r.ok)throw new Error(r.status);return r.json()});
+function syncFailed(e){
+  // Served from a plain static host: no shared sheet, so behave as before.
+  if(e&&e.noServer){online=false;dirty=false;setLS(DIRTY_KEY,null);clearTimeout(pushTimer);syncStatus("Saved on this phone");return}
+  syncStatus(e&&e.key?"Not syncing: open the scorer link with its key":"Offline: saved on this phone",true);
+}
+async function push(){
+  if(pushing){clearTimeout(pushTimer);pushTimer=setTimeout(push,400);return}
+  pushing=true;const sent=changeSeq;
+  try{
+    const r=await api("PUT",{cfg:CFG,scores:S});
+    VER=r.version;setLS(VER_KEY,String(VER));
+    if(changeSeq===sent){dirty=false;setLS(DIRTY_KEY,null);syncStatus("Saved to all devices")}
+    else{clearTimeout(pushTimer);pushTimer=setTimeout(push,400)}   // changed while saving
+  }catch(e){syncFailed(e);clearTimeout(pushTimer);pushTimer=setTimeout(push,5000)}
+  finally{pushing=false}
+}
+function adopt(st){
+  CFG=Object.assign({},DEFAULT_CFG,st.cfg);if(!Array.isArray(CFG.posters))CFG.posters=[];
+  S=st.scores||{};POSTERS=CFG.posters;VER=st.version;
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG));localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  setLS(VER_KEY,String(VER));
+  build();render();
+  // Don't overwrite a field or poster edit that's in progress on this device.
+  const typing=document.activeElement&&$("setup").contains(document.activeElement);
+  if(!typing&&editing===-1)fillSetup();
+}
+async function pull(){
+  if(!online||pushing)return;
+  if(dirty){push();return}
+  try{
+    const st=await api("GET");
+    if(dirty)return;   // a local change landed while we were fetching
+    if(st.version===0||!st.cfg){markDirty();return}   // empty server: seed it from this device
+    if(st.version!==VER)adopt(st);
+    syncStatus("Saved to all devices");
+  }catch(e){syncFailed(e)}
+}
+loadSharedSetup();   // after the sync state above, since loading saves
+if(online){
+  pull();
+  setInterval(()=>{if(document.visibilityState==="visible")pull()},4000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull()});
+  addEventListener("online",pull);
+}
 
 build();render();fillSetup();
 </script>
