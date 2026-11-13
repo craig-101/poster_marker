@@ -79,6 +79,7 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
 .add input{min-width:0}
 .add #addId{flex:0 0 76px}.add #addName{flex:1 1 120px}.add #addTitle{flex:1 1 100%}
 .add button{flex:1 1 100%;height:46px;border-radius:12px;border:0;background:var(--navy);color:#fff;font-size:16px;font-weight:650;cursor:pointer}
+#shareBtn{width:100%;height:46px;margin-top:12px;border-radius:12px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);font-size:16px;font-weight:650;cursor:pointer}
 #setupMsg{font-size:13px;min-height:18px;margin-top:6px;color:var(--accent)}
 #setupMsg.err{color:#b42318}
 </style>
@@ -108,8 +109,9 @@ input[type=date]{width:100%;border:1.5px solid var(--line);border-radius:10px;pa
         <input type="text" id="addTitle" placeholder="Title (optional)">
         <button id="addBtn">Add poster</button>
       </div>
+      <button id="shareBtn">Send setup to another phone</button>
       <div id="setupMsg"></div>
-      <div class="hint">Changes save automatically.</div>
+      <div class="hint">Changes save on this device only. To use them on another phone, send the setup and open the link there.</div>
     </div>
   </details>
 
@@ -334,6 +336,36 @@ document.getElementById("full").addEventListener("input",render);
 document.getElementById("reset").onclick=()=>document.getElementById("confirm").style.display="block";
 document.getElementById("no").onclick=()=>document.getElementById("confirm").style.display="none";
 document.getElementById("yes").onclick=()=>{S={};save();document.getElementById("confirm").style.display="none";render();window.scrollTo(0,0)};
+
+// ---- Send setup between devices ----
+// Each browser keeps its own copy of the setup, so a poster list typed on one
+// device never reaches another. "Send setup" packs the session details and
+// posters into the link's #fragment (never sent to the server); opening that
+// link loads them here. Scores are keyed by poster number, so they're kept.
+const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,"+").replace(/_/g,"/"))));
+$("shareBtn").onclick=async()=>{
+  const {session,date,group,judge,posters}=CFG;
+  const url=location.origin+location.pathname+"#setup="+b64e(JSON.stringify({session,date,group,judge,posters}));
+  const n=posters.length,text=`DAS 2026 poster scorer: ${n} poster${n===1?"":"s"} for ${session}`;
+  try{if(navigator.share){await navigator.share({title:"Poster scorer setup",text,url});return}}catch(e){if(e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(url);setupMsg("Link copied. Open it on the other phone.");return}catch(e){}
+  prompt("Copy this link and open it on the other phone:",url);
+};
+function loadSharedSetup(){
+  const m=/^#setup=([\w-]+)$/.exec(location.hash);if(!m)return;
+  history.replaceState(null,"",location.pathname+location.search);
+  let inc;try{inc=JSON.parse(b64d(m[1]))}catch(e){alert("That setup link is damaged. Ask for it to be sent again.");return}
+  if(!inc||!Array.isArray(inc.posters))return;
+  const posters=inc.posters.filter(p=>p&&p.id&&p.name).map(p=>({id:String(p.id),name:String(p.name),title:String(p.title||"")}));
+  if(!confirm(`Load ${posters.length} poster${posters.length===1?"":"s"} for "${inc.session||"this session"}"?\n\nThis replaces the poster list on this phone. Scores already given to the same poster numbers are kept.`))return;
+  ["session","date","group"].forEach(k=>{if(typeof inc[k]==="string")CFG[k]=inc[k]});
+  // Keep this phone's judge name if it has been set; it's per judge.
+  if(inc.judge&&(!CFG.judge||CFG.judge===DEFAULT_CFG.judge))CFG.judge=inc.judge;
+  CFG.posters=posters;POSTERS=posters;saveCfg();
+  setTimeout(()=>{$("setup").open=true;setupMsg(`Loaded ${posters.length} posters.`)},0);
+}
+loadSharedSetup();
 
 build();render();fillSetup();
 </script>
